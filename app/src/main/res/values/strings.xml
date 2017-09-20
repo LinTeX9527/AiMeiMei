@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">AiMeimei</string>
+    <string name="action_settings">Settings</string>
+
+    <!-- activity_talk.xml 中的文本资源 -->
+    <string name="editHint">召唤美眉</string>
+    <string name="btnSend">发送</string>
+</resources>
