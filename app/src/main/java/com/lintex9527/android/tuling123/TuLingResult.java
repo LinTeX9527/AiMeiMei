@@ -4,6 +4,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -18,7 +19,7 @@ public class TuLingResult {
     //====================================  返回的数据格式  ===================================
     // 文本类，返回结果包含 code, text
     public static final int CODE_TEXT = 100000;
-    // 链接类，返回结果包含 code, text, url
+    // 链接类，【图片搜索】返回结果包含 code, text, url
     public static final int CODE_LINK = 200000;
     // 新闻类，返回结果包含 code, text, list，其中list又包含 article, source(图片地址), icon, detailurl
     public static final int CODE_NEWS = 302000;
@@ -44,10 +45,14 @@ public class TuLingResult {
 
     private int code;
     private String text;
+    // 【图片搜索】结果包含 url
     private String url;
 
-    HashMap<String, String> listitem = null;
-    List<HashMap<String, String>> lists = null;
+    // 保存新闻类的结果
+    private List<HashMap<String, String>> newslist = null;
+
+    // 保存菜谱类的结果
+    private List<HashMap<String, String>> cookbooklist = null;
 
     //=============================  单实例  ================
     private static TuLingResult uniqueInstance = null;
@@ -94,36 +99,88 @@ public class TuLingResult {
                 case CODE_NEWS:
                     setText(jsonObject.getString("text"));
                     JSONArray thelist = jsonObject.getJSONArray("list");
-
+                    for(int i = 0; i < thelist.length(); i ++){
+                        JSONObject item = thelist.getJSONObject(i);
+                        HashMap<String, String> listitem = new HashMap<String, String>();
+                        listitem.put("article", item.getString("article"));
+                        listitem.put("source", item.getString("source"));
+                        listitem.put("icon", item.getString("icon"));
+                        listitem.put("detailurl", item.getString("detailurl"));
+                        newslist.add(listitem);
+                    }
                     break;
 
+                // 菜谱类，返回结果包含 code, text, list ，其中 list 包含 name, icon, info, detailurl
                 case CODE_COOKBOOK:
+                    setText(jsonObject.getString("text"));
+                    JSONArray cooklist = jsonObject.getJSONArray("list");
+                    for (int i = 0; i < cooklist.length(); i ++){
+                        JSONObject item = cooklist.getJSONObject(i);
+                        HashMap<String, String> listitem = new HashMap<String, String>();
+                        listitem.put("name", item.getString("name"));
+                        listitem.put("icon", item.getString("icon"));
+                        listitem.put("info", item.getString("info"));
+                        listitem.put("detailurl", item.getString("detailurl"));
+                        cookbooklist.add(listitem);
+                    }
                     break;
 
+                // 儿歌类，仅限儿童版使用
                 case CODE_CHILDEN_SONG:
+
                     break;
 
+                // 诗词类，仅限儿童版使用
                 case CODE_POETRY:
                     break;
 
+                //=====================  返回异常码  =========================
                 case CODE_ERR_KEY:
-                    break;
-
                 case CODE_ERR_INFO:
-                    break;
-
                 case CODE_ERR_REQNUM:
-                    break;
-
                 case CODE_ERR_FORMAT:
-                    break;
-
+                    setText(jsonObject.getString("text"));
                 default:
                     break;
             }
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public String toString() {
+        String result = null;
+        switch (getCode()){
+
+            case CODE_TEXT:
+                result = getText();
+                break;
+
+            // 返回的是链接类
+            case CODE_LINK:
+                result = getText() + " : " + getUrl();
+                break;
+
+            // 返回的是新闻类
+            case CODE_NEWS:
+                result = getText() + " : " + newslist.toString();
+                break;
+
+            // 返回的是菜单类
+            case CODE_COOKBOOK:
+                result = getText() + " : " + cookbooklist.toString();
+                break;
+
+            case CODE_ERR_FORMAT:
+            case CODE_ERR_INFO:
+            case CODE_ERR_KEY:
+            case CODE_ERR_REQNUM:
+            default:
+                result = String.format("%d : %s", getCode(), getText());
+                break;
+        }
+        return result;
     }
 
     /**
@@ -133,18 +190,20 @@ public class TuLingResult {
         code = 0;
         text = "";
         url = "";
-    }
-
-
-    /**
-     * 清空列表 lists
-     */
-    public void clearLists(){
-        if (lists == null){
-            return;
+        // 新闻类的结果
+        if (newslist == null){
+            newslist = new ArrayList<HashMap<String, String>>();
         }
-        lists.clear();
+        newslist.clear();
+
+        // 菜谱类的结果
+        if (cookbooklist == null){
+            cookbooklist = new ArrayList<HashMap<String, String>>();
+        }
+        cookbooklist.clear();
     }
+
+
 
     /**
      * 检验状态码是否出错

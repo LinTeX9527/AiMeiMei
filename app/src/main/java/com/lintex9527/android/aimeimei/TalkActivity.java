@@ -125,7 +125,7 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
         public void onResponse(JSONObject jsonObject) {
             TuLingResult tuLingResult = TuLingResult.getUniqueInstance();
             tuLingResult.parseJSONObject(jsonObject);
-            addWhosSaying(robot.getName(), tuLingResult.getText());
+            addWhosSaying(robot.getName(), tuLingResult.toString());
         }
     }
 
