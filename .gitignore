@@ -12,3 +12,7 @@
 # my settings
 .idea/
 
+
+# must be caution with Pictures.
+!*.png
+
