@@ -4,7 +4,7 @@ package com.lintex9527.android.tuling123;
 /**
  * 向图灵机器人服务器发送请求的结构体
  *
- * Created by shzhan on 2017/9/20.
+ * Created by LinTeX9527 on 2017/9/20.
  */
 
 public class TuLing {

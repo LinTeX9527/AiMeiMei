@@ -1,5 +1,6 @@
 package com.lintex9527.android.aimeimei;
 
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -16,8 +17,10 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.lintex9527.android.tuling123.TuLing;
 import com.lintex9527.android.tuling123.TuLingResult;
+import com.lintex9527.android.utils.Constant;
+import com.lintex9527.android.utils.DBManager;
+import com.lintex9527.android.utils.MySQLiteHelper;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
@@ -25,12 +28,22 @@ import java.util.Map;
 
 public class TalkActivity extends AppCompatActivity implements View.OnClickListener {
 
+    // 控件相关
     private EditText editText = null; // 用户在这里输入消息
     private Button btnSendMsg = null;  // 点击发送用户消息
     private TextView tvSayings = null;  // 显示聊天记录
 
     // 相关的资源
     TuLing robot = null;
+    SQLiteDatabase db = null;
+    MySQLiteHelper helper = null;
+
+    // 表示数据库中记录的序号
+    // 因为数据库中可能已经有了之前的聊天记录，所以需要先获得聊天记录总条数
+    int index = 0;
+
+    //
+    MyResponseListener myResponseListener = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +77,13 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
         robot.setLng("121.478941");
         robot.setLat("31.236009");
 
+
+        myResponseListener = new MyResponseListener();
+
+        helper = DBManager.getInstance(this);
+        db = helper.getWritableDatabase();
+        db.close();
+
     }
 
     /**
@@ -87,6 +107,14 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
                 clearMyMessage(); // 点击按钮需要清空输入框
                 tvSayings.requestFocus();
 
+                // 添加到数据库
+                db = helper.getWritableDatabase();
+                // 注意下面字符串的前后需要添加单引号
+                index = DBManager.getCount(db, Constant.TABLE_NAME);
+                String sql = "insert into " + Constant.TABLE_NAME + " values(" + (++index) + ", '" + "我" + "', '" + msg + "')";
+                db.execSQL(sql);
+                db.close();
+
                 //-------------------------------------------------------------
                 // 这里添加测试 volley 的代码
                 RequestQueue requestQueue = Volley.newRequestQueue(getBaseContext());
@@ -99,7 +127,7 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
                 JSONObject jsonObject = new JSONObject(map);
                 JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST,
                         TuLing.API_URL, jsonObject,
-                        new MyResponseListner()
+                        myResponseListener
                         , new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError volleyError) {
@@ -119,13 +147,26 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    class MyResponseListner implements Response.Listener<JSONObject>{
+    /**
+     * JsonObjectRequest 的返回OK 结果的解析器
+     * 这里把返回json格式的结果封装成 TuLingResult 对象，并把它的有用信息保存到数据库中
+     */
+    private class MyResponseListener implements Response.Listener<JSONObject>{
 
         @Override
         public void onResponse(JSONObject jsonObject) {
             TuLingResult tuLingResult = TuLingResult.getUniqueInstance();
             tuLingResult.parseJSONObject(jsonObject);
             addWhosSaying(robot.getName(), tuLingResult.toString());
+
+            // 添加到数据库
+            db = helper.getWritableDatabase();
+            // 更新当前记录的索引号
+            index = DBManager.getCount(db, Constant.TABLE_NAME);
+            // 注意下面字符串的前后需要添加单引号
+            String sql = "insert into " + Constant.TABLE_NAME + " values(" + (++index) + ", '" + robot.getName() + "', '" + tuLingResult.toString() + "')";
+            db.execSQL(sql);
+            db.close();
         }
     }
 
@@ -137,6 +178,7 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     /**
+     * 更新UI界面
      * 在对话框中增加一条消息，显示格式如下：
      * 我：你好呀
      * 机器人：你在干嘛呀？
