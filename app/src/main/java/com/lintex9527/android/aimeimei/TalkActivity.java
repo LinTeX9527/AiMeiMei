@@ -6,7 +6,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import com.android.volley.Request;
@@ -23,7 +23,9 @@ import com.lintex9527.android.utils.MySQLiteHelper;
 
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class TalkActivity extends AppCompatActivity implements View.OnClickListener {
@@ -31,7 +33,11 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
     // 控件相关
     private EditText editText = null; // 用户在这里输入消息
     private Button btnSendMsg = null;  // 点击发送用户消息
-    private TextView tvSayings = null;  // 显示聊天记录
+    private ListView listView = null;   // 加载用户聊天记录
+
+    // 使用 ListView 来显示数据，所以要绑定适配器MyTextAdapter，还有数据集合 MyMsgLists
+    List<MsgEntity> myMsgLists = null;
+    MyTextAdapter myTextAdapter = null;
 
     // 相关的资源
     TuLing robot = null;
@@ -42,7 +48,7 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
     // 因为数据库中可能已经有了之前的聊天记录，所以需要先获得聊天记录总条数
     int index = 0;
 
-    //
+    //　Volley　中响应 JsonObjectRequest　的正确返回结果的监听器
     MyResponseListener myResponseListener = null;
 
     @Override
@@ -62,7 +68,7 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
     private void initView(){
         editText = (EditText) findViewById(R.id.editMsg);
         btnSendMsg = (Button) findViewById(R.id.btnSendMsg);
-        tvSayings = (TextView) findViewById(R.id.tvSayings);
+        listView = (ListView) findViewById(R.id.listview);
     }
 
     /**
@@ -73,17 +79,21 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
         robot.setKey(getResources().getString(R.string.key));
         robot.setName("美眉");
         robot.setUserid("123456789abc");
+        //　TODO:
+        //　位置信息还需要优化
         robot.setLoc("上海市人民广场");
         robot.setLng("121.478941");
         robot.setLat("31.236009");
-
-
-        myResponseListener = new MyResponseListener();
 
         helper = DBManager.getInstance(this);
         db = helper.getWritableDatabase();
         db.close();
 
+        myMsgLists = new ArrayList<MsgEntity>();
+        myTextAdapter = new MyTextAdapter(this, myMsgLists);
+        listView.setAdapter(myTextAdapter);
+
+        myResponseListener = new MyResponseListener();
     }
 
     /**
@@ -102,10 +112,18 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
         switch (view.getId()){
             case R.id.btnSendMsg:
                 String msg = editText.getText().toString();
-                robot.setInfo(msg);
-                addWhosSaying("我", msg);
                 clearMyMessage(); // 点击按钮需要清空输入框
-                tvSayings.requestFocus();
+
+                //　不能发送空消息
+                if (msg.equals("") || msg.trim().equals("")){
+                    Toast.makeText(getBaseContext(), "不要发送空消息", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                robot.setInfo(msg);
+                myMsgLists.add(new MsgEntity(MsgEntity.FLAGS.SENDER, msg));
+                myTextAdapter.notifyDataSetChanged();
+
 
                 // 添加到数据库
                 db = helper.getWritableDatabase();
@@ -157,7 +175,9 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
         public void onResponse(JSONObject jsonObject) {
             TuLingResult tuLingResult = TuLingResult.getUniqueInstance();
             tuLingResult.parseJSONObject(jsonObject);
-            addWhosSaying(robot.getName(), tuLingResult.toString());
+
+            myMsgLists.add(new MsgEntity(MsgEntity.FLAGS.RECEIVER, tuLingResult.getText()));
+            myTextAdapter.notifyDataSetChanged();
 
             // 添加到数据库
             db = helper.getWritableDatabase();
@@ -177,24 +197,5 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
         editText.setText("");
     }
 
-    /**
-     * 更新UI界面
-     * 在对话框中增加一条消息，显示格式如下：
-     * 我：你好呀
-     * 机器人：你在干嘛呀？
-     * @param who 说话的人的名字
-     * @param msg 说的内容
-     */
-    private void addWhosSaying(String who, String msg){
-        String line = who + " : " + msg;
-        tvSayings.setText(tvSayings.getText().toString() + "\n" + line);
-    }
 
-    /**
-     * 使用 Toast.maketext() 弹出Toast.LENGTH_SHORT 的消息
-     * @param msg
-     */
-    public void showMsg(String msg){
-        Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
-    }
 }
