@@ -19,6 +19,13 @@ android {
     }
     productFlavors {
     }
+    /* 需要把libs 文件夹添加到 jniLibs 路径才能是的讯飞语音引擎初始化成功 */
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['libs']
+        }
+    }
+
 }
 
 dependencies {

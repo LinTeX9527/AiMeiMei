@@ -2,6 +2,9 @@
     <string name="app_name">AiMeimei</string>
     <string name="action_settings">Settings</string>
 
+    <!-- 科大讯飞语音识别申请 -->
+    <string name="app_id">59c0e0d2</string>
+
     <!-- activity_talk.xml 中的文本资源 -->
     <string name="editHint">召唤美眉</string>
     <string name="btnSend">发送</string>
