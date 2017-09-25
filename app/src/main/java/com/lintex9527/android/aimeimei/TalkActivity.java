@@ -10,6 +10,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -83,7 +84,7 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
     private EditText editText = null;   // 用户在这里输入消息
     private Button btnSendMsg = null;   // 点击发送用户消息
     private ListView listView = null;   // 加载用户聊天记录
-    private Button btnVoice = null;     // 启动语音听写
+    private ImageButton btnVoice = null;     // 启动语音听写
 
     // 使用 ListView 来显示数据，所以要绑定适配器MyTextAdapter，还有数据集合 MyMsgLists
     List<MsgEntity> myMsgLists = null;
@@ -119,7 +120,7 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
         editText = (EditText) findViewById(R.id.editMsg);
         btnSendMsg = (Button) findViewById(R.id.btnSendMsg);
         listView = (ListView) findViewById(R.id.listview);
-        btnVoice = (Button) findViewById(R.id.btnVoice);
+        btnVoice = (ImageButton) findViewById(R.id.btnVoice);
     }
 
     /**
