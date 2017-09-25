@@ -9,6 +9,8 @@
     <string name="editHint">召唤美眉</string>
     <string name="btnSend">发送</string>
 
+    <string formatted="false" name="tts_toast_format">缓冲进度为%d%%，播放进度为%d%%</string>
+
     <string name="key">10df2c2c1b5f4a63ad7383b977592e15</string>
     <string name="code_err_format">数据格式异常</string>
 </resources>

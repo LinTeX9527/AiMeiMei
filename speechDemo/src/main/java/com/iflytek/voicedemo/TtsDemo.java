@@ -119,6 +119,7 @@ public class TtsDemo extends Activity implements OnClickListener {
         // 合成的音频格式：只支持pcm格式
 		case R.id.tts_play:
 			// 移动数据分析，收集开始合成事件
+			// TODO FlowerCollector 是什么鬼？
 			FlowerCollector.onEvent(TtsDemo.this, "tts_play");
 			
 			String text = ((EditText) findViewById(R.id.tts_text)).getText().toString();

@@ -6,9 +6,11 @@ import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.Request;
@@ -27,6 +29,8 @@ import com.iflytek.cloud.RecognizerResult;
 import com.iflytek.cloud.SpeechConstant;
 import com.iflytek.cloud.SpeechError;
 import com.iflytek.cloud.SpeechRecognizer;
+import com.iflytek.cloud.SpeechSynthesizer;
+import com.iflytek.cloud.SynthesizerListener;
 import com.iflytek.sunflower.FlowerCollector;
 import com.lintex9527.android.tuling123.TuLing;
 import com.lintex9527.android.tuling123.TuLingResult;
@@ -57,6 +61,21 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
     String result_last = null;
     // 语音识别结果成功还是失败
     int ret  = 0;
+
+    // --------------------------- 语音合成相关  ---------------------
+    // 语音合成器
+    private SpeechSynthesizer mTts = null;
+    // 发音人
+    private String voicer = "xiaoyan";
+
+    // 缓冲进度
+    private int mPercentForBuffering = 0;
+    // 播放进度
+    private int mPercentForPlaying = 0;
+
+    // 引擎类型
+    private String mEngineType = SpeechConstant.TYPE_CLOUD;
+
 
     private Toast mToast = null;
 
@@ -125,6 +144,15 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
         myMsgLists = new ArrayList<>();
         myTextAdapter = new MyTextAdapter(this, myMsgLists);
         listView.setAdapter(myTextAdapter);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                TextView tvMsg = (TextView) view.findViewById(R.id.tvMsg);
+                String text = tvMsg.getText().toString();
+                showTip("获取的字符串是：" + text);
+                mTts.startSpeaking(text, mTtsListener);
+            }
+        });
 
         myResponseListener = new MyResponseListener();
 
@@ -132,6 +160,119 @@ public class TalkActivity extends AppCompatActivity implements View.OnClickListe
         // --------------------  语音听写相关 --------------------------
         mIat = SpeechRecognizer.createRecognizer(TalkActivity.this, mInitListener);
         mToast = Toast.makeText(TalkActivity.this, "", Toast.LENGTH_SHORT);
+
+        // --------------------  语音合成相关 -------------------------
+        // 初始化合成对象
+        mTts = SpeechSynthesizer.createSynthesizer(TalkActivity.this, mTtsInitListener);
+
+        setParamTTS();
+    }
+
+    /**
+     * 初始化语音合成监听。
+     */
+    private InitListener mTtsInitListener = new InitListener() {
+        @Override
+        public void onInit(int code) {
+            Log.d(TAG, "InitListener init() code = " + code);
+            if (code != ErrorCode.SUCCESS) {
+                showTip("初始化失败,错误码："+code);
+            } else {
+                // 初始化成功，之后可以调用startSpeaking方法
+                // 注：有的开发者在onCreate方法中创建完合成对象之后马上就调用startSpeaking进行合成，
+                // 正确的做法是将onCreate中的startSpeaking调用移至这里
+            }
+        }
+    };
+
+    /**
+     * 合成回调监听。
+     */
+    private SynthesizerListener mTtsListener = new SynthesizerListener() {
+
+        @Override
+        public void onSpeakBegin() {
+            showTip("开始播放");
+        }
+
+        @Override
+        public void onSpeakPaused() {
+            showTip("暂停播放");
+        }
+
+        @Override
+        public void onSpeakResumed() {
+            showTip("继续播放");
+        }
+
+        @Override
+        public void onBufferProgress(int percent, int beginPos, int endPos,
+                                     String info) {
+            // 合成进度
+            mPercentForBuffering = percent;
+            showTip(String.format(getString(R.string.tts_toast_format),
+                    mPercentForBuffering, mPercentForPlaying));
+        }
+
+        @Override
+        public void onSpeakProgress(int percent, int beginPos, int endPos) {
+            // 播放进度
+            mPercentForPlaying = percent;
+            showTip(String.format(getString(R.string.tts_toast_format),
+                    mPercentForBuffering, mPercentForPlaying));
+        }
+
+        @Override
+        public void onCompleted(SpeechError error) {
+            if (error == null) {
+                showTip("播放完成");
+            } else if (error != null) {
+                showTip(error.getPlainDescription(true));
+            }
+        }
+
+        @Override
+        public void onEvent(int eventType, int arg1, int arg2, Bundle obj) {
+            // 以下代码用于获取与云端的会话id，当业务出错时将会话id提供给技术支持人员，可用于查询会话日志，定位出错原因
+            // 若使用本地能力，会话id为null
+            //	if (SpeechEvent.EVENT_SESSION_ID == eventType) {
+            //		String sid = obj.getString(SpeechEvent.KEY_EVENT_SESSION_ID);
+            //		Log.d(TAG, "session id =" + sid);
+            //	}
+        }
+    };
+
+    /**
+     * 语音合成的参数设置
+     */
+    public void setParamTTS(){
+        mTts.setParameter(SpeechConstant.PARAMS, null);
+
+        // 设置引擎
+        mTts.setParameter(SpeechConstant.ENGINE_TYPE, SpeechConstant.TYPE_CLOUD);
+
+        // 设置发音人
+        mTts.setParameter(SpeechConstant.VOICE_NAME, voicer);
+
+        // 设置合成语速
+        mTts.setParameter(SpeechConstant.SPEED, "50");
+
+        // 设置合成音调
+        mTts.setParameter(SpeechConstant.PITCH, "50");
+
+        // 设置合成音量
+        mTts.setParameter(SpeechConstant.VOLUME, "50");
+
+        // 设置播放器音频流类型
+        mTts.setParameter(SpeechConstant.STREAM_TYPE, "3");
+
+        // 设置播放合成音频打断音乐播放器
+        mTts.setParameter(SpeechConstant.KEY_REQUEST_FOCUS, "true");
+
+        // 设置音频保存路径，保存格式只能为 pcm, wav 格式
+        mTts.setParameter(SpeechConstant.AUDIO_FORMAT, "wav");
+        mTts.setParameter(SpeechConstant.TTS_AUDIO_PATH, Environment.getExternalStorageDirectory() + "/msc/tts.wav");
+
     }
 
     /**
